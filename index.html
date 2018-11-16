@@ -1,0 +1,101 @@
+<html>
+<head><title>Tones</title>
+<style>
+
+body {
+  font-family: arial;
+}
+.tones {
+  width: 100vw;
+  display: grid;
+  grid-template-rows: auto auto auto;
+  grid-template-columns: repeat(27, 3.6vw);
+  background-color: #2196F3;
+  padding: 1px;  
+}
+.tone {
+  cursor:pointer;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  padding: 5px;
+  font-size: 10px;
+  text-align: center;
+}
+.tone.playing {
+  background-color: rgba(255, 255, 127, 0.8)
+}
+.tone.five-limit {
+  border: 2px solid rgba(0, 0, 0, 1);
+}
+.noteName {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+</style>
+</head>
+<body>
+
+<div id="tones" class="tones">
+
+</div>
+
+<script>
+var sharp = '\u266f';
+var flat = '\u266d';
+var middleC = 261.625565;
+var noteNames=['C','C'+sharp,'D','E'+flat,'E','F','F'+sharp,'G','A'+flat,'A','B'+flat,'B'];
+
+// create web audio api context
+var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function toggleTone(event) {
+  var tone = event.target;
+  var playing = tone.classList.toggle("playing");
+  if (playing) {
+    var oscillator = audioCtx.createOscillator();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = tone.freq;
+    oscillator.connect(audioCtx.destination);
+    tone.oscillator = oscillator;     
+    tone.oscillator.start();
+  } else {
+    tone.oscillator.stop();
+  }
+}
+
+var hs = Math.pow(2, 1/12);
+var tonesEl = document.getElementById("tones");
+for (var r=-1; r<=1; r++) {
+  for (var c=-13; c<=13; c++) {
+     var tone = document.createElement('div');
+     tone.className="tone";
+     tone.row = r;
+     tone.col = c;
+     if (Math.abs(c) < 3) tone.classList.add("five-limit");
+     if (r == 0) tone.classList.add("pythagorean");
+     var note = (12+(r*4+c*7)%12)%12;
+     tone.noteName = noteNames[note];
+     var numerator = Math.pow(5,Math.max(r,0))*Math.pow(3,Math.max(c,0));
+     var denominator = Math.pow(5,Math.max(-r,0))*Math.pow(3,Math.max(-c,0));
+     var scale = Math.floor(Math.log2(numerator/denominator)+(1/24))     
+     numerator *= Math.pow(2, Math.max(-scale,0));
+     denominator *= Math.pow(2, Math.max(scale,0));
+     tone.numerator = numerator;
+     tone.denominator = denominator;
+     var freq = middleC * numerator / denominator;
+     tone.freq = freq;
+     tone.temperedFreq = middleC * Math.pow(2, note/12);
+     var cents = (Math.log2(tone.freq/tone.temperedFreq)*1200);
+     tone.cents = cents;
+     tone.innerHTML = "<span class=\"noteName\">"+tone.noteName+"</span><br><br>"+ 
+       tone.numerator+"<br>&mdash;&mdash;<br>"+tone.denominator+"<br><br>"+
+       tone.freq.toFixed(0)+"<br><br>"+((cents>=0)?"+":"")+cents.toFixed(0)+"&cent;";
+     tone.addEventListener("click", toggleTone);     
+     tonesEl.appendChild(tone);
+  }
+}
+
+</script>
+</body>
+</html>
