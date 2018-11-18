@@ -8,7 +8,7 @@ body {
 .tones {
   width: 100vw;
   display: grid;
-  grid-template-rows: auto auto auto;
+  grid-template-rows: auto auto auto auto;
   grid-template-columns: repeat(27, 3.6vw);
   background-color: #2196F3;
   padding: 1px;  
@@ -21,20 +21,24 @@ body {
   font-size: 10px;
   text-align: center;
 }
+.tone.tempered {
+  background-color: rgba(0, 255, 128);
+}
 .tone.playing {
   background-color: rgba(255, 255, 127, 0.8)
 }
 .tone.five-limit {
   border: 2px solid rgba(0, 0, 0, 1);
 }
+
 .noteName {
   font-size: 20px;
   font-weight: bold;
 }
 #oscilloscope {
   border: 1px solid rgba(0, 0, 0, 0.8);
-   width: 90vw;
-   height: 20vw;
+   width: 45vw;
+   height: 10vw;
 }
 
 </style>
@@ -54,7 +58,7 @@ var noteNames=['C','C'+sharp,'D','E'+flat,'E','F','F'+sharp,'G','A'+flat,'A','B'
 var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 var analyser = audioCtx.createAnalyser();
 
-analyser.fftSize = 4096;
+analyser.fftSize = 8192;
 var bufferLength = analyser.frequencyBinCount;
 var dataArray = new Float32Array(bufferLength);
 var prevArray = new Float32Array(bufferLength);
@@ -167,6 +171,20 @@ for (var r=-1; r<=1; r++) {
      tonesEl.appendChild(tone);
   }
 }
+for (var c=-13; c<=13; c++) {
+   var tone = document.createElement('div');
+   tone.className="tone tempered";
+   tone.col = c;
+   var note = ((c%12)+12)%12;
+   tone.noteName = noteNames[note];
+   tone.temperedFreq = middleC * Math.pow(2, note/12);
+   tone.freq = tone.temperedFreq;
+   tone.innerHTML = "<span class=\"noteName\">"+tone.noteName+"</span><br><br>"+ 
+     "2<sup>"+note+"/12</sup><br><br>"+
+       tone.freq.toFixed(0);
+     tone.addEventListener("click", toggleTone(tone));     
+     tonesEl.appendChild(tone);
+  }
 
 </script>
 </body>
