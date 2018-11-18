@@ -50,55 +50,62 @@ var flat = '\u266d';
 var middleC = 261.625565;
 var noteNames=['C','C'+sharp,'D','E'+flat,'E','F','F'+sharp,'G','A'+flat,'A','B'+flat,'B'];
 
-var lowestFrequency = Infinity;
 
 var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 var analyser = audioCtx.createAnalyser();
 
-analyser.fftSize = 2048;
+analyser.fftSize = 4096;
 var bufferLength = analyser.frequencyBinCount;
 var dataArray = new Float32Array(bufferLength);
+var prevArray = new Float32Array(bufferLength);
 
-// Get a canvas defined with ID "oscilloscope"
 var canvas = document.getElementById("oscilloscope");
 var canvasCtx = canvas.getContext("2d");
 
 // draw an oscilloscope of the current audio source
 
+const sq = x => x * x;
+
+var prevMaxCorrelationIndex = 0;
 function draw() {
 
-  requestAnimationFrame(draw);
+  setTimeout(function(){requestAnimationFrame(draw);}, 40);
 
+  var tmp = prevArray;
+  prevArray = dataArray;
+  dataArray = tmp;
+  
   analyser.getFloatTimeDomainData(dataArray);
 
+  // find the max cross correlation
+  var maxCorrelationIndex = 0;
+  var maxCorrelationValue = -Infinity; 
+  for (var i = 0; i < bufferLength/2; i++) {
+	var curCorrelationValue = 0;
+	for (var j = 0; j < bufferLength/2; j++) {
+	  curCorrelationValue += -sq(prevArray[j+prevMaxCorrelationIndex] - dataArray[j+i]);
+	}
+	if (curCorrelationValue > maxCorrelationValue) {
+		maxCorrelationValue = curCorrelationValue;
+		maxCorrelationIndex = i;
+	}
+  }  
   
   canvasCtx.fillStyle = "rgb(255, 255, 255)";
   canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
   canvasCtx.lineWidth = 1.5;
   canvasCtx.strokeStyle = "rgb(0, 0, 0)";
   canvasCtx.beginPath();
-  var sliceWidth = canvas.width * 1.0 / bufferLength;
+  var sliceWidth = canvas.width * 2 / bufferLength;
   var x = 0;
-  if (isFinite(lowestFrequency)) {
-    //x += (audioCtx.currentTime % (1/lowestFrequency))*32*canvas.width;  
-  }
-  // find first zero crossing
-  var gotLessThanZero = false;
-  for (var i = 0; i < bufferLength; i++) {
-    gtz = dataArray[i]>=0;
-    if (!gotLessThanZero) {
-      gotLessThanZero = !gtz;
-    } else {
-      if (gtz) break;
-    }
-  }
-  var i0 = (i < bufferLength) ? i : 0
-  for (var i = i0; i < bufferLength; i++) {
+ 
+  for (var i = 0; i < bufferLength/2; i++) {
 
-    var v = dataArray[i];
-    var y = (v + 1) * canvas.height / 2;
+    var v = dataArray[i + maxCorrelationIndex];
+    var y = ((v*0.5) + 1) * canvas.height / 2;
+	
 
-    if (i === i0) {
+    if (i === 0) {
       canvasCtx.moveTo(x, y);
     } else {
       canvasCtx.lineTo(x, y);
@@ -107,8 +114,9 @@ function draw() {
     x += sliceWidth;
   }
 
-  //canvasCtx.lineTo(canvas.width, canvas.height / 2);
   canvasCtx.stroke();
+  prevMaxCorrelationIndex = maxCorrelationIndex;
+
 }
 
 draw();
@@ -126,7 +134,6 @@ function toggleTone(tone) {return function() {
   } else {
     tone.oscillator.stop();
   }
-  lowestFrequency = Math.min(...Array.from(document.querySelectorAll('.tone.playing')).map(t => t.freq));
 }};
 
 var hs = Math.pow(2, 1/12);
