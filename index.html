@@ -6,10 +6,11 @@ body {
   font-family: arial;
 }
 .tones {
-  width: 100vw;
+  margin: auto;
+  width: 90vw;
   display: grid;
   grid-template-rows: auto auto auto auto;
-  grid-template-columns: repeat(27, 3.6vw);
+  grid-template-columns: repeat(25, 3.6vw);
   background-color: #2196F3;
   padding: 1px;  
 }
@@ -24,21 +25,34 @@ body {
 .tone.tempered {
   background-color: rgba(0, 255, 128);
 }
-.tone.playing {
-  background-color: rgba(255, 255, 127, 0.8)
+
+.tone.pythagorean {
+  background-color: rgba(255, 127, 255, 0.8);
 }
+
 .tone.five-limit {
-  border: 2px solid rgba(0, 0, 0, 1);
+  background-color: rgba(127, 255, 255, 0.8);
+}
+
+.tone.five-limit.pythagorean {
+  background-color: rgba(191, 191, 255, 0.8);
+}
+
+.tone.playing {
+  background-color: rgba(255, 255, 127, 0.8) !important;
 }
 
 .noteName {
   font-size: 20px;
   font-weight: bold;
 }
+
 #oscilloscope {
   border: 1px solid rgba(0, 0, 0, 0.8);
-   width: 45vw;
-   height: 10vw;
+  width: 45vw;
+  height: 10vw;
+  display: block;
+  margin: auto;
 }
 
 </style>
@@ -143,13 +157,13 @@ function toggleTone(tone) {return function() {
 var hs = Math.pow(2, 1/12);
 var tonesEl = document.getElementById("tones");
 for (var r=-1; r<=1; r++) {
-  for (var c=-13; c<=13; c++) {
+  for (var c=-12; c<=12; c++) {
      var tone = document.createElement('div');
      tone.className="tone";
      tone.row = r;
      tone.col = c;
      if (Math.abs(c) < 3) tone.classList.add("five-limit");
-     if (r == 0) tone.classList.add("pythagorean");
+     if ((Math.abs(c) < 7) && (r == 0)) tone.classList.add("pythagorean");
      var note = (12+(r*4+c*7)%12)%12;
      tone.noteName = noteNames[note];
      var numerator = Math.pow(5,Math.max(r,0))*Math.pow(3,Math.max(c,0));
@@ -171,7 +185,7 @@ for (var r=-1; r<=1; r++) {
      tonesEl.appendChild(tone);
   }
 }
-for (var c=-13; c<=13; c++) {
+for (var c=-12; c<=12; c++) {
    var tone = document.createElement('div');
    tone.className="tone tempered";
    tone.col = c;
