@@ -1,0 +1,382 @@
+<html>
+<head><title>Keyboard Tunings</title>
+<style>
+
+body {
+  font-family: arial;
+}
+
+h2 {
+  font-size: 13px;
+}
+
+.split {
+  display: grid;
+  width: auto;
+  grid-template-columns: auto auto;
+}
+
+.pythagorean,.tempered,.fivelimit,.sevenlimit {
+  margin: auto;
+  width: auto;
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  grid-template-columns: repeat(13, auto);
+  padding: 1px;  
+}
+.tone {
+  cursor: pointer;
+  border: 1px solid black;
+  padding: 3px;
+  font-size: 10px;
+  text-align: center;
+  position: relative;
+}
+.pythagorean .tone {
+  background-color: #7fff7f;
+}
+.tempered .tone {
+  background-color: #ff7fff;
+}
+.fivelimit .tone {
+  background-color: #ff7f7f;
+}
+.sevenlimit .tone {
+  background-color: #7fffff;
+}
+
+.tone div {
+  bottom: 0;
+  margin-left: auto;
+  margin-right: auto;
+  left: 0;
+  right: 0;
+}
+.tone.active {
+  background-color: #ffff7f;
+}
+.tone .noteName {
+  font-size: 15px;
+  font-weight: bold;
+}
+
+
+.keyboard {
+  margin: auto;
+  width: 90vw;
+  display: grid;
+  grid-template-rows: auto;
+  grid-template-columns: repeat(31, 3.1vw);
+  padding: 1px;  
+}
+.key {
+  cursor:pointer;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  padding: 5px;
+  font-size: 10px;
+  text-align: center;
+  position: relative;
+}
+.key div {
+  position: absolute;
+  bottom: 0;
+  margin-left: auto;
+  margin-right: auto;
+  left: 0;
+  right: 0;
+}
+.key.ivory {
+  grid-row-start: 1;
+  background-color: rgba(255, 255, 255, 1.0);
+  height: 12vw;
+  z-index: 0;
+  color: black;
+}
+
+.key.ebony {
+  grid-row-start: 1;
+  background-color: rgba(63, 63, 63, 1.0);
+  margin-left: -1.5vw;
+  margin-right: 1.5vw;
+  height: 8vw;
+  z-index: 1;
+  color: white;
+}
+
+.key.playing {
+  background-color: rgba(255, 255, 127, 1.0) !important;
+  color: black !important;
+}
+
+.noteName {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+#oscilloscope {
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  width: 45vw;
+  height: 10vw;
+  display: block;
+  margin: auto;
+}
+
+</style>
+</head>
+<body>
+
+<h2>Pythagorean tunings (3-limit)<button id="allPythagorean">all</button></h2>
+<div id="pythagorean" class="pythagorean"></div>
+
+<div class="split">
+<div>
+<h2>Five-limit tunings<button id="allFivelimit">all</button></h2>
+<div id="fivelimit" class="fivelimit"></div>
+</div>
+<div>
+<h2>Seven-limit tunings (centaur)<button id="allSevenlimit">all</button></h2>
+<div id="sevenlimit" class="sevenlimit"></div>
+</div>
+</div>
+
+<h2>Even tempered tunings<button id="allTempered">all</button></h2>
+<div id="tempered" class="tempered"></div>
+
+<h2> Keyboard </h2>
+<div id="keyboard" class="keyboard"></div>
+<h2> Oscilloscope </h2>
+<canvas id="oscilloscope"></canvas>
+
+<script>
+var waveType = 'sine';
+
+var sharp = '\u266f';
+var flat = '\u266d';
+var middleC = 261.625565;
+var noteNames=['C','C'+sharp,'D','E'+flat,'E','F','F'+sharp,'G','A'+flat,'A','B'+flat,'B'];
+var noteIvory = [true, false, true, false, true, true, false, true, false, true, false, true];
+
+var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+var gainNode = audioCtx.createGain();
+gainNode.gain.value = 1;
+gainNode.connect(audioCtx.destination);
+var analyser = audioCtx.createAnalyser();
+
+analyser.fftSize = 8192;
+var bufferLength = analyser.frequencyBinCount;
+var dataArray = new Float32Array(bufferLength);
+var prevArray = new Float32Array(bufferLength);
+
+var canvas = document.getElementById("oscilloscope");
+var canvasCtx = canvas.getContext("2d");
+
+// draw an oscilloscope of the current audio source
+
+const sq = x => x * x;
+
+var prevMaxCorrelationIndex = 0;
+function draw() {
+
+  setTimeout(function(){requestAnimationFrame(draw);}, 40);
+//  requestAnimationFrame(draw);
+
+  var tmp = prevArray;
+  prevArray = dataArray;
+  dataArray = tmp;
+  
+  analyser.getFloatTimeDomainData(dataArray);
+
+  // find the max cross correlation
+  var maxCorrelationIndex = 0;
+  var maxCorrelationValue = -Infinity; 
+  for (var i = 0; i < bufferLength/2; i++) {
+	var curCorrelationValue = 0;
+	for (var j = 0; j < bufferLength/2; j++) {
+	  curCorrelationValue += -sq(prevArray[j+prevMaxCorrelationIndex] - dataArray[j+i]);
+	}
+	if (curCorrelationValue > maxCorrelationValue) {
+		maxCorrelationValue = curCorrelationValue;
+		maxCorrelationIndex = i;
+	}
+  }  
+  
+  canvasCtx.fillStyle = "rgb(255, 255, 255)";
+  canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+  canvasCtx.lineWidth = 1.5;
+  canvasCtx.strokeStyle = "rgb(0, 0, 0)";
+  canvasCtx.beginPath();
+  var sliceWidth = canvas.width * 2 / bufferLength;
+  var x = 0;
+ 
+  for (var i = 0; i < bufferLength/2; i++) {
+
+    var v = dataArray[i + maxCorrelationIndex];
+    var y = ((v*(gainNode.gain.value)) + 1) * canvas.height / 2;
+	
+
+    if (i === 0) {
+      canvasCtx.moveTo(x, y);
+    } else {
+      canvasCtx.lineTo(x, y);
+    }
+
+    x += sliceWidth;
+  }
+
+  canvasCtx.stroke();
+  prevMaxCorrelationIndex = maxCorrelationIndex;
+
+}
+
+draw();
+
+function toggleKey(key) {return function() {
+  var playing = key.classList.toggle("playing");
+  gainNode.gain.value = 1/(Array.from(document.querySelectorAll(".key.playing")).length || 1);
+  if (playing) {
+    var oscillator = audioCtx.createOscillator();
+    oscillator.type = waveType;
+    oscillator.frequency.value = key.freq;
+    oscillator.connect(gainNode);
+    oscillator.connect(analyser);
+    key.oscillator = oscillator;     
+    key.oscillator.start();
+  } else {
+    key.oscillator.stop();
+  }
+}};
+
+function activateTone(tone) { return function() {
+  Array.from(document.querySelectorAll(".tone")).filter(t => t.noteName === tone.noteName).forEach(t => t.classList.toggle("active", t.freq === tone.freq));
+  Array.from(document.querySelectorAll(".key")).filter(k => k.noteName === tone.noteName).forEach(k => {
+	k.freq = Math.pow(2,k.octave)*tone.freq;
+	if (k.oscillator) k.oscillator.frequency.value = k.freq;
+	k.querySelector("span.freq").innerText = k.freq.toFixed();
+  });
+}};
+
+function activateAll(type) { return function(){
+  Array.from(document.getElementById(type).querySelectorAll(".tone")).forEach(t => activateTone(t)());
+}};
+
+var hs = Math.pow(2, 1/12);
+var keyboardEl = document.getElementById("keyboard");
+
+var gridColumnIvory = 1;
+for (var c=-24; c<=24; c++) {
+   var key = document.createElement('div');
+   key.className="key";
+   key.col = c;
+   key.style.gridColumnStart = gridColumnIvory;
+   var note = ((c%12)+12)%12;
+   key.octave = Math.floor(c/12);
+   if (noteIvory[note]) {
+     gridColumnIvory++;
+	 key.classList.add('ivory');
+   } else {
+     key.classList.add('ebony');
+   }
+   key.noteName = noteNames[note];
+   key.innerHTML = "<div><span class=\"noteName\">"+key.noteName+"</span><br><span class=\"freq\"></span></div>";
+   key.addEventListener("click", toggleKey(key));     
+   keyboardEl.appendChild(key);
+  }
+
+var pythagoreanEl = document.getElementById("pythagorean");
+for (var c=-6; c<=6; c++) {
+   var tone = document.createElement('div');
+   tone.className="tone";
+   tone.col = c;
+   tone.style.gridColumnStart = c+7;
+   tone.note = (((c*7)%12)+12)%12;
+   tone.noteName=noteNames[tone.note];
+   var numerator = Math.pow(3,Math.max(c,0));
+   var denominator = Math.pow(3,Math.max(-c,0));
+   var scale = Math.floor(Math.log2(numerator/denominator)+(1/24))     
+   numerator *= Math.pow(2, Math.max(-scale,0));
+   denominator *= Math.pow(2, Math.max(scale,0));
+   tone.numerator = numerator;
+   tone.denominator = denominator;
+   var freq = middleC * numerator / denominator;
+   tone.freq = freq;
+   tone.innerHTML = "<div><span class=\"noteName\">"+tone.noteName+"</span>:  "+
+      tone.numerator+"/"+tone.denominator+", "+tone.freq.toFixed(0)+"</div>";
+   tone.addEventListener("click", activateTone(tone));
+   pythagoreanEl.appendChild(tone);	  
+}
+document.getElementById("allPythagorean").addEventListener("click",activateAll("pythagorean"));
+
+var fivelimitEl = document.getElementById("fivelimit");
+for (var r=-1; r<=1; r++) {
+for (var c=-2; c<=2; c++) {
+   var tone = document.createElement('div');
+   tone.className="tone";
+   tone.style.gridColumnStart = c+3;
+   tone.style.gridRowStart = r+2;
+   tone.note = (((c*7+r*4)%12)+12)%12;
+   tone.noteName=noteNames[tone.note];
+     var numerator = Math.pow(5,Math.max(r,0))*Math.pow(3,Math.max(c,0));
+     var denominator = Math.pow(5,Math.max(-r,0))*Math.pow(3,Math.max(-c,0));
+   var scale = Math.floor(Math.log2(numerator/denominator)+(1/24))     
+   numerator *= Math.pow(2, Math.max(-scale,0));
+   denominator *= Math.pow(2, Math.max(scale,0));
+   tone.numerator = numerator;
+   tone.denominator = denominator;
+   var freq = middleC * numerator / denominator;
+   tone.freq = freq;
+   tone.innerHTML = "<div><span class=\"noteName\">"+tone.noteName+"</span>: "+
+      tone.numerator+"/"+tone.denominator+", "+tone.freq.toFixed(0)+"</div>";
+   tone.addEventListener("click", activateTone(tone));
+   fivelimitEl.appendChild(tone);	  
+}
+}
+document.getElementById("allFivelimit").addEventListener("click",activateAll("fivelimit"));
+
+var sevenlimitEl = document.getElementById("sevenlimit");
+var centaur = [[1,1],[21,20],[9,8],[7,6],[5,4],[4,3],[7,5],[3,2],[14,9],[5,3],[7,4],[15,8]];
+for (var r=0; r<=2; r++) {
+for (var c=0; c<=3; c++) {
+   var tone = document.createElement('div');
+   tone.className="tone";
+   tone.style.gridColumnStart = c+1;
+   tone.style.gridRowStart = r+1;
+   tone.note = (((c*7+r*4+1)%12)+12)%12;
+   tone.noteName=noteNames[tone.note];
+   tone.numerator = centaur[tone.note][0];
+   tone.denominator = centaur[tone.note][1];
+   var freq = middleC * tone.numerator / tone.denominator;
+   tone.freq = freq;
+   tone.innerHTML = "<div><span class=\"noteName\">"+tone.noteName+"</span>: "+
+      tone.numerator+"/"+tone.denominator+", "+tone.freq.toFixed(0)+"</div>";
+   tone.addEventListener("click", activateTone(tone));
+   sevenlimitEl.appendChild(tone);	  
+}
+}
+document.getElementById("allSevenlimit").addEventListener("click",activateAll("sevenlimit"));
+
+
+
+var temperedEl = document.getElementById("tempered");
+for (var c=0; c<12; c++) {
+   var tone = document.createElement('div');
+   tone.className="tone";
+   tone.col = c;
+   tone.style.gridColumnStart = c+1;
+   tone.note = (((c)%12)+12)%12;
+   tone.noteName=noteNames[tone.note];
+   tone.freq = middleC * Math.pow(2, c/12);
+   
+   tone.innerHTML = "<div><span class=\"noteName\">"+tone.noteName+"</span>: "+
+      "2<sup>"+tone.note+"/12</sup>, "+tone.freq.toFixed(0)+"</div>";
+   tone.addEventListener("click", activateTone(tone));
+   temperedEl.appendChild(tone);
+   activateTone(tone)();
+}
+
+document.getElementById("allTempered").addEventListener("click",activateAll("tempered"));
+  
+  
+</script>
+</body>
+</html>
