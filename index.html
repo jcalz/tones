@@ -16,7 +16,7 @@ h2 {
   grid-template-columns: auto auto;
 }
 
-.pythagorean,.tempered,.fivelimit,.sevenlimit {
+.pythagorean,.tempered,.fivelimit,.sevenlimit,.manual {
   margin: auto;
   width: auto;
   display: grid;
@@ -43,6 +43,12 @@ h2 {
 }
 .sevenlimit .tone {
   background-color: #7fffff;
+}
+.manual .tone {
+  background-color: #7f7fff;
+}
+.manual input {
+  width: 70%;
 }
 
 .tone div {
@@ -142,6 +148,9 @@ h2 {
 
 <h2>Even tempered tunings<button id="allTempered">all</button></h2>
 <div id="tempered" class="tempered"></div>
+
+<h2>Manual tunings<button id="allManual">all</button></h2>
+<div id="manual" class="manual"></div>
 
 <h2> Keyboard </h2>
 <div id="keyboard" class="keyboard"></div>
@@ -387,6 +396,26 @@ for (var c=0; c<12; c++) {
 }
 
 document.getElementById("allTempered").addEventListener("click",activateAll("tempered"));
+
+var manualEl = document.getElementById("manual");
+for (var c=0; c<12; c++) {
+   let tone = document.createElement('div');
+   tone.className="tone";
+   tone.col = c;
+   tone.style.gridColumnStart = c+1;
+   tone.note = (((c)%12)+12)%12;
+   tone.noteName=noteNames[tone.note];
+   tone.freq = middleC * Math.pow(2, (c+Math.random()-0.5)/12);
+   
+   tone.innerHTML = "<div><span class=\"noteName\">"+tone.noteName+"</span>: "+
+      "<input type=\"number\" step=\"0.01\" value=\""+tone.freq.toFixed(2)+"\"></div>";
+   tone.addEventListener("click", activateTone(tone));
+   let input = tone.querySelector("input");
+   input.addEventListener("change", ()=>{ tone.freq=parseFloat(input.value); activateTone(tone)();});
+   manualEl.appendChild(tone);
+}
+
+document.getElementById("allManual").addEventListener("click",activateAll("manual"));
 
 var songTimeouts = [];
   
