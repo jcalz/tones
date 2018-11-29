@@ -30,7 +30,34 @@ body {
 }
 .tone input {
   width: 70%;
+  margin-bottom: 5px;
 }
+
+.tone .cents-diff {
+  display: block;
+  border: 1px solid black;
+}
+
+.tone .cents-diff.good {
+  background-color: #ffffff;
+  color: black;
+}
+
+.tone .cents-diff.fair {
+  background-color: #ffaf7f;
+  color: black;  
+}
+
+.tone .cents-diff.poor {
+  background-color: #ff7f00;
+  color: black;
+}
+
+.tone .cents-diff.awful {
+  background-color: black;
+  color: white;
+}
+
 
 .tone div {
   bottom: 0;
@@ -43,6 +70,8 @@ body {
 .tone .noteName {
   font-size: 15px;
   font-weight: bold;
+  line-height: 20px;
+  display: inline-block;
 }
 
 
@@ -106,16 +135,23 @@ body {
   margin: auto;
 }
 
+.hidden {
+  display: none !important;
+}
+
 </style>
 </head>
 <body>
 
 <h2> Tunings </h2>
 
+<button id="showControls">controls</button>
+
+<div class="controls">
 Tuning Method: 
 <select id="tuningMethod">
  <option value="manual" selected>Manual</option> 
- <option value="pythagorean">Pythagorean (tree-limit)</option>
+ <option value="pythagorean">Pythagorean (three-limit)</option>
  <option value="fiveLimit">Five-limit</option>
  <option value="sevenLimit">Seven-limit (centaur)</option>
  <option value="evenTempered">Even-tempered</option>
@@ -126,6 +162,7 @@ Tuning Key:
 </select>
 <br>
 <br>
+</div>
 
 <div id="tunings" class="tunings"></div>
 
@@ -291,10 +328,13 @@ for (var c=0; c<12; c++) {
    tone.noteName=noteNames[tone.note];
    tone.innerHTML = "<span class=\"noteName\"></span><br>"
    if (c === 0) tone.classList.add("active-key");
-   tone.tuning = document.createElement('span');
+   tone.tuning = document.createElement('span');   
    tone.appendChild(tone.tuning);
+   tone.centsDiff = document.createElement('span');
+   tone.centsDiff.classList.add("cents-diff");
+   tone.appendChild(tone.centsDiff);
    tone.freq = 0;   
-   tuningsEl.appendChild(tone);
+   tuningsEl.appendChild(tone);   
    tones.push(tone);
 }
 
@@ -310,12 +350,23 @@ function normalizeFrequency(freq) {
    return freq / Math.pow(2, scale);   
 }
 
+function centsDiffCloseness(centsDiff, cents) {
+  var abs = Math.abs(cents);
+  centsDiff.classList.toggle("good", abs<12);
+  centsDiff.classList.toggle("fair", (12<=abs) && (abs<24));
+  centsDiff.classList.toggle("poor", (24<=abs) && (abs<36));
+  centsDiff.classList.toggle("awful", 36<=abs);
+}
+
 function justIntonation(tunings, key) {
    tones.forEach(tone => {
      var note = tone.note;
-	 var mult = tunings[note][0] / tunings[note][1];
+	   var mult = tunings[note][0] / tunings[note][1];
      tone.tuning.innerHTML = ""+tunings[note][0]+"/"+tunings[note][1]+"<br>"+mult.toFixed(3);
      tone.freq = normalizeFrequency(middleC * Math.pow(2, key/12) * mult);
+     var cents = Math.floor(((Math.log2(mult)*12-note)*100)+0.5);
+     tone.centsDiff.innerHTML = "" + (cents>0?"+":"") + cents+"&cent;<br>from tempered"
+     centsDiffCloseness(tone.centsDiff, cents);
    });
    adjustKeyboard(key);
 }
@@ -325,6 +376,9 @@ function evenTempered(key) {
       var note = tone.note
       tone.tuning.innerHTML = "2<sup>"+note+"/12</sup><br>"+Math.pow(2, note/12).toFixed(3);
 	  tone.freq = normalizeFrequency(middleC * Math.pow(2, (note+key)/12));
+    var cents = -Math.floor(((Math.log2(fiveTunings[note][0]/fiveTunings[note][1])*12-note)*100)+0.5);
+    tone.centsDiff.innerHTML = "" + (cents>0?"+":"") + cents+"&cent;<br>from 5-limit"
+    centsDiffCloseness(tone.centsDiff, cents);
    });
    adjustKeyboard(key);
 }
@@ -338,6 +392,11 @@ function manualTuning(key) {
       tone.tuning.innerHTML="";
       tone.tuning.appendChild(manualTunings[note]);
       tone.freq = normalizeFrequency(middleC * Math.pow(2, key/12) * (+manualTunings[note].value));
+      var cents = Math.floor(((Math.log2(+manualTunings[note].value)*12-note)*100)+0.5);
+      tone.centsDiff.innerHTML = "" + (cents>0?"+":"") + cents+"&cent;<br>from tempered";
+      centsDiffCloseness(tone.centsDiff, cents);
+      cents = Math.floor(((Math.log2(+manualTunings[note].value)*12-(Math.log2(fiveTunings[note][0]/fiveTunings[note][1])*12))*100)+0.5);      
+      tone.centsDiff.innerHTML += "<br><br>" + (cents>0?"+":"") + cents+"&cent;<br>from 5-limit";      
    });
    adjustKeyboard(key);
 }
@@ -407,7 +466,12 @@ document.getElementById("jingleBellsCSharp").addEventListener("click",()=>playSo
 document.getElementById("winterWonderland").addEventListener("click",()=>playSong(winterWonderland));
 document.getElementById("cancelSongs").addEventListener("click", cancelSongs);
 
+function toggleHideControls(force) {
+  Array.from(document.querySelectorAll(".controls,.cents-diff")).forEach(x=>x.classList.toggle("hidden",force));
+}
 
+document.getElementById("showControls").addEventListener("click",()=>toggleHideControls());
+toggleHideControls(true);
   
 </script>
 </body>
