@@ -154,7 +154,7 @@ Tuning Method:
  <option value="pythagorean">Pythagorean (three-limit)</option>
  <option value="fiveLimit">Five-limit</option>
  <option value="sevenLimit">Seven-limit (centaur)</option>
- <option value="evenTempered">Even-tempered</option>
+ <option value="equalTempered">Equal-tempered</option>
 </select>
 
 Tuning Key: 
@@ -371,7 +371,7 @@ function justIntonation(tunings, key) {
    adjustKeyboard(key);
 }
 
-function evenTempered(key) {
+function equalTempered(key) {
    tones.forEach(tone => {
       var note = tone.note
       tone.tuning.innerHTML = "2<sup>"+note+"/12</sup><br>"+Math.pow(2, note/12).toFixed(3);
@@ -424,7 +424,7 @@ var tuningMethods = {
   pythagorean: (key)=>justIntonation(pythTunings,key),
   fiveLimit: (key)=>justIntonation(fiveTunings,key),
   sevenLimit: (key)=>justIntonation(sevenTunings,key),
-  evenTempered: evenTempered,
+  equalTempered: equalTempered,
 }
 
 function setTuningMethod() {  
