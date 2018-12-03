@@ -197,9 +197,10 @@ var noteIvory = [true, false, true, false, true, true, false, true, false, true,
 
 var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 var gainNode = audioCtx.createGain();
-gainNode.gain.value = 1;
+gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
 gainNode.connect(audioCtx.destination);
 var analyser = audioCtx.createAnalyser();
+gainNode.connect(analyser);
 
 analyser.fftSize = 8192;
 var bufferLength = analyser.frequencyBinCount;
@@ -250,7 +251,7 @@ function draw() {
   for (var i = 0; i < bufferLength/2; i++) {
 
     var v = dataArray[i + maxCorrelationIndex];
-    var y = ((v*(gainNode.gain.value)) + 1) * canvas.height / 2;
+    var y = (v + 1) * canvas.height / 2;
 	
 
     if (i === 0) {
@@ -272,21 +273,22 @@ draw();
 var timeConstant = 0.05;
 function toggleKey(key, activate) {return function() {  
   var playing = key.classList.toggle("playing", activate);
+  
+  if (!key.oscillator && !playing) return;
+  
   if (!key.oscillator) {
     var oscillator = audioCtx.createOscillator();
 	var gain = audioCtx.createGain();
 	gain.gain.value = 0;
     oscillator.type = waveType;
     oscillator.frequency.value = key.freq;
-	oscillator.connect(gain);
+  	oscillator.connect(gain);
     gain.connect(gainNode);
-    gain.connect(analyser);
     key.oscillator = oscillator;     
 	key.gain = gain;
     key.oscillator.start(); 	
   }
-  //console.log(key.noteName, playing)
-  gainNode.gain.value = 1/(Math.max(Array.from(document.querySelectorAll(".key.playing")).length, 4));
+  gainNode.gain.setTargetAtTime(1/(Math.max(Array.from(document.querySelectorAll(".key.playing")).length, 4)), audioCtx.currentTime, timeConstant);
   key.gain.gain.setTargetAtTime(playing ? 1.0 : 0, audioCtx.currentTime, timeConstant);
   if (!playing) {
 	key.oscillator.stop(audioCtx.currentTime + timeConstant*6);
