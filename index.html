@@ -6,6 +6,12 @@ body {
   font-family: arial;
 }
 
+
+h2 {
+  text-align: center;
+  margin-bottom: 0    
+}
+
 .tunings {
   margin: auto;
   width: auto;
@@ -76,6 +82,7 @@ body {
 
 
 .keyboard {
+  touch-action: none;
   margin: auto;
   width: 90vw;
   display: grid;
@@ -167,6 +174,7 @@ Tuning Key:
 <div id="tunings" class="tunings"></div>
 
 <h2> Keyboard </h2>
+<input type="checkbox" id="hold">Hold</input>
 <div id="keyboard" class="keyboard"></div>
 <h2> Oscilloscope </h2>
 <canvas id="oscilloscope"></canvas>
@@ -186,6 +194,11 @@ function htmlToElement(html) {
     return template.content.firstChild;
 }
 
+var holdEl = document.getElementById("hold");
+holdEl.addEventListener("change",()=>{
+	if (holdEl.checked) return;
+	keys.forEach(k => toggleKey(k, false));
+});
 
 var waveType = 'triangle';
 
@@ -271,10 +284,11 @@ function draw() {
 draw();
 
 var timeConstant = 0.05;
-function toggleKey(key, activate) {return function() {  
+function toggleKey(key, activate) {
+  var oldPlaying = key.classList.contains("playing");
   var playing = key.classList.toggle("playing", activate);
   
-  if (!key.oscillator && !playing) return;
+  if (oldPlaying === playing) return;
   
   if (!key.oscillator) {
     var oscillator = audioCtx.createOscillator();
@@ -294,7 +308,7 @@ function toggleKey(key, activate) {return function() {
 	key.oscillator.stop(audioCtx.currentTime + timeConstant*6);
 	key.oscillator = null;
   }
-  }};
+}
 
 
 var hs = Math.pow(2, 1/12);
@@ -304,7 +318,7 @@ var keyboardEl = document.getElementById("keyboard");
 var keys = [];
 var gridColumnIvory = 1;
 for (var c=-24; c<=24; c++) {
-   var key = document.createElement('div');
+   let key = document.createElement('div');
    keys.push(key);
    key.className="key";
    key.col = c;
@@ -320,10 +334,36 @@ for (var c=-24; c<=24; c++) {
    }
    key.noteName = noteNames[note];
    key.innerHTML = "<div><span class=\"noteName\">"+key.noteName+"</span><br><span class=\"freq\"></span></div>";
-   key.addEventListener("click", toggleKey(key));     
+   
+   ["mouseover","mousedown","mouseup"].forEach(s => key.addEventListener(s, e => {     
+     if (holdEl.checked) return;
+	 e.preventDefault();	 
+	 toggleKey(key, !!(e.buttons & 1));
+   }));
+
+   key.addEventListener("mouseout", e=>{     
+     if (holdEl.checked) return;
+     e.preventDefault();
+	 toggleKey(key, false);
+   });
+   
+   key.addEventListener("click", ()=>{if (holdEl.checked) toggleKey(key)});     
    keyboardEl.appendChild(key);
   }
 
+["touchstart","touchmove","touchend","touchcancel"].forEach(s =>
+  keyboardEl.addEventListener(s, (e)=>{
+    if (holdEl.checked) return;
+    var keysToPlay = {};
+    Array.from(e.touches).forEach(t => {
+	var key = document.elementFromPoint(t.clientX, t.clientY);
+	while ((key !== null) && (!('col' in key))) {
+	  key = key.parentNode;
+	}
+	if (key !== null) keysToPlay[key.col] = true;	
+	});
+	keys.forEach(k => toggleKey(k, k.col in keysToPlay));
+  }));
   
 var tuningsEl = document.getElementById("tunings");
 var tones = [];
@@ -455,13 +495,13 @@ function playSong(notes, transpose, speed) {
   cancelSongs();
   if (!transpose) transpose = 0;  
   if (!speed) speed = 1;
-  songTimeouts.push(...notes.map(n => setTimeout(toggleKey(keys[n.note+transpose],n.active), n.time/speed)));
+  songTimeouts.push(...notes.map(n => setTimeout(()=>toggleKey(keys[n.note+transpose],n.active), n.time/speed)));
 }  
 
 function cancelSongs() {
   songTimeouts.forEach(t => clearTimeout(t));
   songTimeouts = [];
-  keys.forEach(k => toggleKey(k, false)());
+  keys.forEach(k => toggleKey(k, false));
 }
   
 /*
