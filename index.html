@@ -4,10 +4,11 @@
 
 body {
   font-family: arial;
+  font-size: 0.9em;
 }
 
 
-h2 {
+h1, h2 {
   text-align: center;
   margin-bottom: 0    
 }
@@ -150,12 +151,19 @@ h2 {
 </head>
 <body>
 
-<h2> Tunings </h2>
+<h1> Tune the keyboard! </h1>
 
+Except for the C notes, the keyboard below is out of tune.  Your job is to fix it!
+
+<h2> Tunings </h2>
+Tune the keyboard by adjusting the frequency ratio for each key with respect to C.  Each note should be a number between 1.000 (which is exactly C) and 2.000 (which is also exactly C one octave up).  Higher notes should have higher numbers than lower notes.  There is more than one "right" answer to this question, and people have <a href="https://en.wikipedia.org/wiki/Musical_tuning#Tuning_systems">thought about this</a> for hundreds of years.
+<br>
+If you click the "controls" button it will give you more information and the ability to choose some pre-set tunings, but it's a good idea to try it for yourself manually first.<br>
+<br>
 <button id="showControls">controls</button>
 
 <div class="controls">
-Tuning Method: 
+<b>Tuning Method:</b> 
 <select id="tuningMethod">
  <option value="manual" selected>Manual</option> 
  <option value="pythagorean">Pythagorean (three-limit)</option>
@@ -163,10 +171,21 @@ Tuning Method:
  <option value="sevenLimit">Seven-limit (centaur)</option>
  <option value="equalTempered">Equal-tempered</option>
 </select>
-
-Tuning Key: 
+&nbsp;&nbsp;
+<b>Tuning Key:</b> 
 <select id="baseKey">
 </select>
+&nbsp;&nbsp;
+<b>Waveform Shape:</b>
+<select id="waveType">
+  <option value="triangle" selected>Triangle</option>
+  <option value="sine">Sine (pure tones)</option>
+  <option value="square">Square</option>
+  <option value="sawtooth">Sawtooth</otion>
+</select>
+<br>
+
+See info on <a href="https://en.wikipedia.org/wiki/Pythagorean_tuning">3-limit</a>, <a href="https://en.wikipedia.org/wiki/Five-limit_tuning#Twelve_tone_scale">5-limit</a>, <a href="http://www.anaphoria.com/centaur.html">Centaur</a>, <a href="https://en.wikipedia.org/wiki/Equal_temperament#Twelve-tone_equal_temperament">equal-tempered</a>.  The colors below give an idea about how far from in-tune the notes are, where 100&cent; is the distance from one note to the next.  If you are off by more than 15&cent; in either direction it will start sounding noticeably off.  
 <br>
 <br>
 </div>
@@ -174,12 +193,17 @@ Tuning Key:
 <div id="tunings" class="tunings"></div>
 
 <h2> Keyboard </h2>
-<input type="checkbox" id="hold">Hold</input>
+Play the keys on the keyboard by clicking them (or touching them if you're using a touch device).  Check the "hold" checkbox if you want the keys to keep playing until you click to turn them off (this is useful for listening to chords) while you adjust the keys.
+<br>
+<b><input type="checkbox" id="hold">Hold</input></b>
 <div id="keyboard" class="keyboard"></div>
 <h2> Oscilloscope </h2>
+The oscilloscope lets you look at how the speaker is moving back and forth to make sounds.  The height of the line below represents the position of the speaker. Louder sounds go higher and lower, while quieter sounds stay toward the middle.  The horizontal position represents time, and the width of the box below is about 46 milliseconds (or 0.046 seconds).  If you play middle C (262 vibrations per second), you should be able to count about 262 &times; 0.046 &approx; 12 waves going from left to right.  Pay attention to how the shape of the graph is related to the sound you hear.
 <canvas id="oscilloscope"></canvas>
 
 <h2> Songs </h2>
+To see how well you've tuned the keyboard, play a pre-recorded song by pressing one of the buttons below (or press "Cancel Songs" to make it stop).  Note that each song shows what key it is in.  It's possible to tune the keyboard so that "Jingle Bells" sounds good in the key of C but terrible in the key of C&#x266f;.  
+<br>
 <button id="jingleBells">Jingle Bells (C)</button>
 <button id="jingleBellsCSharp">Jingle Bells (C&#x266f;)</button>
 <button id="winterWonderland">Winter Wonderland (F-to-F&#x266f;)</button>
@@ -200,7 +224,7 @@ holdEl.addEventListener("change",()=>{
 	keys.forEach(k => toggleKey(k, false));
 });
 
-var waveType = 'triangle';
+
 
 var sharp = '\u266f';
 var flat = '\u266d';
@@ -455,6 +479,15 @@ function adjustKeyboard(key) {
      k.querySelector("span.freq").innerText = k.freq.toFixed();
   });
 }
+
+var waveType;
+var waveTypeEl = document.getElementById("waveType");
+function setWaveType() {
+  waveType = waveTypeEl.value;
+  if (keys) keys.filter(k => k.oscillator).forEach(k => k.oscillator.type = waveType);
+}
+setWaveType();
+waveTypeEl.addEventListener("change", setWaveType);
 
 
 var tuningMethodEl = document.getElementById("tuningMethod");
