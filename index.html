@@ -241,6 +241,18 @@ gainNode.connect(analyser);
 
 analyser.fftSize = 8192;
 var bufferLength = analyser.frequencyBinCount;
+
+// Hey, Safari doesn't have getFloatTimeDomainData for whatever reason
+if (!analyser.getFloatTimeDomainData) {
+  var byteArray = new Uint8Array(bufferLength);
+  analyser.getFloatTimeDomainData = (buf) => {
+    analyser.getByteTimeDomainData(byteArray);
+	for (var i = 0; i < bufferLength; i++) {
+	  buf[i] = (byteArray[i]-128)/128;
+	}
+  };
+}
+
 var dataArray = new Float32Array(bufferLength);
 var prevArray = new Float32Array(bufferLength);
 
