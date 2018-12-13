@@ -341,10 +341,7 @@ function toggleKey(key, activate) {
   }
   gainNode.gain.setTargetAtTime(1/(Math.max(Array.from(document.querySelectorAll(".key.playing")).length, 4)), audioCtx.currentTime, timeConstant);
   key.gain.gain.setTargetAtTime(playing ? 1.0 : 0, audioCtx.currentTime, timeConstant);
-  if (!playing) {
-	key.oscillator.stop(audioCtx.currentTime + timeConstant*6);
-	key.oscillator = null;
-  }
+  
 }
 
 
